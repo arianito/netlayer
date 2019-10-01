@@ -51,8 +51,8 @@ export interface HttpController {
 }
 
 let defaultDriver: HttpDriver = null;
-const requestMiddlewareChain: HttpRequestMiddleware[] = [];
-const responseMiddlewareChain: HttpResponseMiddleware[] = [];
+const requestMiddlewareChain: {name: string, middleware: HttpRequestMiddleware}[] = [];
+const responseMiddlewareChain: {name: string, middleware: HttpResponseMiddleware}[] = [];
 const mockedRoutes: HttpController[] = [];
 
 export const configuration: HttpConfig = {
@@ -105,11 +105,35 @@ export function mock(path:string, method: HttpMethod = 'POST') {
 	};
 }
 
-export function requestMiddleware(middleware: HttpRequestMiddleware) {
-	requestMiddlewareChain.push(middleware);
+export function requestMiddleware(name: string, middleware: HttpRequestMiddleware) {
+	const index = requestMiddlewareChain.findIndex(a=>a.name == name);
+	if(index > -1){
+		if(middleware) {
+			requestMiddlewareChain[index].middleware = middleware;
+		}else {
+			requestMiddlewareChain.splice(index, 1);
+		}
+	}else {
+		requestMiddlewareChain.push({
+			name,
+			middleware,
+		});
+	}
 }
-export function responseMiddleware(middleware: HttpResponseMiddleware) {
-	responseMiddlewareChain.push(middleware);
+export function responseMiddleware(name: string, middleware: HttpResponseMiddleware) {
+	const index = requestMiddlewareChain.findIndex(a=>a.name == name);
+	if(index > -1){
+		if(middleware) {
+			responseMiddlewareChain[index].middleware = middleware;
+		}else {
+			responseMiddlewareChain.splice(index, 1);
+		}
+	}else {
+		responseMiddlewareChain.push({
+			name,
+			middleware,
+		});
+	}
 }
 
 export const request = async <R = any>(
@@ -118,7 +142,7 @@ export const request = async <R = any>(
 ): Promise<HttpResponse<R>> => {
 	let requestCache = request;
 	for (const m of requestMiddlewareChain) {
-		requestCache = m(requestCache);
+		requestCache = m.middleware(requestCache);
 	}
 	//
 	let responseCache = null;
@@ -127,13 +151,13 @@ export const request = async <R = any>(
 	} catch (e) {
 		let failureCache = e as HttpResponse;
 		for (const m of responseMiddlewareChain) {
-			failureCache = m(failureCache);
+			failureCache = m.middleware(failureCache);
 		}
 		throw failureCache;
 	}
 	//
 	for (const m of responseMiddlewareChain) {
-		responseCache = m(responseCache);
+		responseCache = m.middleware(responseCache);
 	}
 	return responseCache;
 };
