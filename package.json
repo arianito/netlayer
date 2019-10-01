@@ -18,5 +18,8 @@
   },
   "bugs": {
     "url": "https://github.com/xeuus/netlayer/issues"
+  },
+  "devDependencies": {
+    "typescript": "^3.6.3"
   }
 }
