@@ -1,0 +1,8 @@
+.DS_Store
+.idea
+.vscode
+.env
+dist
+example-bundle
+example-dist
+node_modules

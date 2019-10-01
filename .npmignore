@@ -1,0 +1,13 @@
+.DS_Store
+.idea
+.vscode
+.env
+src
+example
+example-bundle
+example-dist
+node_modules
+webpack.config.js
+postcss.config.js
+tsconfig.json
+tsconfig-example.json

@@ -1,0 +1,22 @@
+{
+  "name": "netlayer",
+  "version": "1.0.1",
+  "description": "networking layer",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "ship": "rm -rf dist && tsc && npm publish",
+    "clean": "rm -rf dist"
+  },
+  "homepage": "https://github.com/xeuus/netlayer",
+  "author": "Aryan Alikhani",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xeuus/netlayer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xeuus/netlayer/issues"
+  }
+}
