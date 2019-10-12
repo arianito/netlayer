@@ -1,6 +1,6 @@
 {
   "name": "netlayer",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "networking layer",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
