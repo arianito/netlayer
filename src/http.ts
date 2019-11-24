@@ -1,5 +1,4 @@
 import {match, MatchResult} from './uri';
-
 export type HttpHeaders = { [key: string]: string };
 export type HttpDriver = (request: HttpRequest) => Promise<HttpResponse>;
 export type HttpRequestMiddleware = (request: HttpRequest) => HttpRequest;
@@ -35,42 +34,34 @@ export type HttpConfig = {
 	logger: any;
 	[key: string]: any;
 };
-
+export type HttpHandler = (request: HttpRequest, response: HttpMockResponse) => any
 export interface HttpController {
 	path: string;
 	method?: HttpMethod;
 	handler: (request: HttpRequest, response: HttpMockResponse) => any;
 }
-
 export class HttpMockResponse {
 	private context: any = null;
-
 	constructor(context: any) {
 		this.context = context;
 	}
-
 	public set status(value: number) {
 		this.context.status = value;
 	}
-
-	public write(data: string) {
-		this.context.body += data;
-	};
-
 	public set body(data: string) {
 		this.context.body = data;
 	};
-
+	public write(data: string) {
+		this.context.body += data;
+	};
 	public json(data: any) {
 		this.context.headers['Content-Type'] = 'application/json';
 		this.context.body = JSON.stringify(data);
 	};
-
 	header(key: string, value: string) {
 		this.context.headers[key] = value;
 	};
 }
-
 export class NetLayer {
 	driver: HttpDriver = null;
 	requestMiddlewareChain: { name: string, middleware: HttpRequestMiddleware }[] = [];
@@ -78,43 +69,57 @@ export class NetLayer {
 	mockedRoutes: HttpController[] = [];
 	configuration: HttpConfig = {
 		baseUrl: '',
-		timeout: 3600,
+		timeout: 10000,
 		logger: null,
 		method: 'POST',
 		withCredentials: false,
 	};
-
 	constructor(driver: HttpDriver) {
 		this.driver = driver;
 	}
 
-	mock = (path: string, method: HttpMethod = 'POST') => {
-		return (target: any, key: string) => {
-			this.mockedRoutes.push({
-				path,
-				method,
-				handler: target[key],
-			})
-		};
-	};
-
-	mockDriver = (fallback?: HttpDriver) => {
+  mockGET = (path: string, handler: HttpHandler) => {
+    this.mockedRoutes.push({
+      path,
+      handler,
+      method: 'GET',
+    })
+  };
+  mockPOST = (path: string, handler: HttpHandler) => {
+    this.mockedRoutes.push({
+      path,
+      handler,
+      method: 'POST',
+    })
+  };
+  mockPUT = (path: string, handler: HttpHandler) => {
+    this.mockedRoutes.push({
+      path,
+      handler,
+      method: 'PUT',
+    })
+  };
+  mockDELETE = (path: string, handler: HttpHandler) => {
+    this.mockedRoutes.push({
+      path,
+      handler,
+      method: 'DELETE',
+    })
+  };
+	mockDRIVER = (fallback?: HttpDriver) => {
 		return async (request: HttpRequest): Promise<HttpResponse> => {
 			const logger = this.configuration.logger;
-
 			function log(...args: any[]) {
 				logger && logger(...args);
 			}
-
 			const path = (request.baseUrl || this.configuration.baseUrl) + request.url;
 			const method = request.method || this.configuration.method;
 			const oldPath = request.url;
 			const oldMethod = request.method;
 			request.url = path;
 			request.method = method;
-
-			log('request', request);
-
+			log(request.url);
+			log(request);
 			let methodNotFound = false;
 			for (const route of this.mockedRoutes) {
 				const matchedPath: MatchResult = match(path, {
@@ -135,11 +140,9 @@ export class NetLayer {
 							request.context = request.context || {};
 							request.context.match = matchedPath;
 							const res = new HttpMockResponse(output);
-
 							await route.handler(request, res);
-
-							log('response', output);
-
+              log(output.status);
+							log(output);
 							if (output.headers['Content-Type'] == 'application/json') {
 								try {
 									output.payload = JSON.parse(output.payload || '{}');
@@ -153,7 +156,7 @@ export class NetLayer {
 								return output;
 							}
 						} catch (e) {
-							log('error', '500 internal server error');
+							log('ERROR', '500 internal server error');
 							throw <HttpResponse>{
 								status: 500,
 								statusText: '500 internal server error',
@@ -167,29 +170,26 @@ export class NetLayer {
 				}
 			}
 			if (methodNotFound) {
-				log('error', '405 method not allowed');
+				log('ERROR', '405 method not allowed');
 				throw <HttpResponse>{
 					status: 405,
 					statusText: '405 method not allowed',
 				};
 			}
-
 			if (fallback) {
-				log('fallback', oldPath);
+				log('FALLBACK', oldPath);
 				request.url = oldPath;
 				request.method = oldMethod;
 				return fallback(request);
 			}
-
-			log('error', '404 not found');
+			log('ERROR', '404 not found');
 			throw <HttpResponse>{
 				status: 404,
 				statusText: '404 not found',
 			};
 		};
 	};
-
-	requestMiddleware = (name: string, middleware: HttpRequestMiddleware) =>{
+	MIDDLEWARE = (name: string, middleware: HttpRequestMiddleware) => {
 		const index = this.requestMiddlewareChain.findIndex(a => a.name == name);
 		if (index > -1) {
 			if (middleware) {
@@ -204,8 +204,7 @@ export class NetLayer {
 			});
 		}
 	};
-
-	responseMiddleware = (name: string, middleware: HttpResponseMiddleware) => {
+	INTERCEPTOR = (name: string, middleware: HttpResponseMiddleware) => {
 		const index = this.responseMiddlewareChain.findIndex(a => a.name == name);
 		if (index > -1) {
 			if (middleware) {
@@ -220,8 +219,35 @@ export class NetLayer {
 			});
 		}
 	};
-
-	request = async <R = any>(
+	GET = <T>(path: string, payload: any) => {
+		return this.REQUEST<T>({
+			url: path,
+			payload: payload,
+			method: 'GET'
+		});
+	};
+	POST = <T>(path: string, payload: any) => {
+		return this.REQUEST<T>({
+			url: path,
+			payload: payload,
+			method: 'POST',
+		});
+	};
+	PUT = <T>(path: string, payload: any) => {
+		return this.REQUEST<T>({
+			url: path,
+			payload: payload,
+			method: 'PUT'
+		});
+	};
+	DELETE = <T>(path: string, payload: any) => {
+		return this.REQUEST<T>({
+			url: path,
+			payload: payload,
+			method: 'DELETE'
+		});
+	};
+	REQUEST = async <R = any>(
 		request: HttpRequest,
 		driver: HttpDriver = null,
 	): Promise<HttpResponse<R>> => {
