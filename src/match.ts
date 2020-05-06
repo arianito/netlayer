@@ -1,3 +1,7 @@
+// author: unknown
+//
+// unreferenced code, please contact me for credit: collaborativeroom@gmail.com
+//
 /* tslint:disable:no-increment-decrement */
 // tslint:disable-next-line:max-line-length
 const PATH_REGEXP = new RegExp(['(\\\\.)', '(?:\\:(\\w+)(?:\\(((?:\\\\.|[^\\\\()])+)\\))?|\\(((?:\\\\.|[^\\\\()])+)\\))([+*?])?'].join('|'), 'g');

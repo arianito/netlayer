@@ -1,2 +1,2 @@
-export * from './http'
-export * from './uri'
+export * from './http';
+export * from './match';
